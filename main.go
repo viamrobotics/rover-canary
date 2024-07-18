@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"go.uber.org/multierr"
@@ -99,6 +100,56 @@ func runBaseTests(base base.Base, odometry movementsensor.MovementSensor) error 
 		return fmt.Errorf("error setting velocity to linear = 0 mm/s and anguar = 90 deg/sec, err = %v", err)
 	}
 
+	// MoveStraight: distance = 100 mm, speed = 50 mm/sec
+	if err := moveStraightTest(base, odometry, 100, 50, false); err != nil {
+		return fmt.Errorf("error moving straight for 100 mm at 50 mm/sec, err = %v", err)
+	}
+
+	// MoveStraight: distance = -100 mm, speed = 300 mm/sec
+	if err := moveStraightTest(base, odometry, -100, 300, false); err != nil {
+		return fmt.Errorf("error moving straight for 1100 mm at 300 mm/sec, err = %v", err)
+	}
+
+	// MoveStraight: distance = 1000 mm, speed = -50 mm/sec
+	if err := moveStraightTest(base, odometry, 1000, -50, true); err != nil {
+		return fmt.Errorf("error moving straight for 1000 mm at -50 mm/sec, err = %v", err)
+	}
+
+	// MoveStraight: distance = -1000 mm, speed = -300 mm/sec
+	if err := moveStraightTest(base, odometry, -1000, -300, true); err != nil {
+		return fmt.Errorf("error moving straight for -1000 mm at -300 mm/sec, err = %v", err)
+	}
+
+	// Spin: distance = 15 deg, speed = 15 deg/sec
+	if err := spinTest(base, odometry, 15, 15, true); err != nil {
+		return fmt.Errorf("error spinning for 15 deg at 15 deg/sec, err = %v", err)
+	}
+
+	// Spin: distance = 15 deg, speed = 90 deg/sec
+	if err := spinTest(base, odometry, 15, -90, true); err != nil {
+		return fmt.Errorf("error spinning for 15 deg at -90 deg/sec, err = %v", err)
+	}
+
+	// Spin: distance = -360 deg, speed = 15 deg/sec
+	if err := spinTest(base, odometry, -360, 15, true); err != nil {
+		return fmt.Errorf("error spinning for -360 deg at 15 deg/sec, err = %v", err)
+	}
+
+	// Spin: distance = -360 deg, speed = -90 deg/sec
+	if err := spinTest(base, odometry, -360, -90, true); err != nil {
+		return fmt.Errorf("error spinning for -360 deg at -90 deg/sec, err = %v", err)
+	}
+
+	// SetPower: power = 10% / Stop
+	if err := setPowerTest(base, 0.1); err != nil {
+		return fmt.Errorf("error setting power, err = %v", err)
+	}
+
+	// SetPower: power = 90% / Stop
+	if err := setPowerTest(base, 0.9); err != nil {
+		return fmt.Errorf("error setting power, err = %v", err)
+	}
+
 	return nil
 }
 
@@ -141,9 +192,166 @@ func setVelocityTest(base base.Base, odometry movementsensor.MovementSensor, lin
 	avgLinear := linearSum / totalTime
 	avgAngular := angularSum / totalTime
 
+	linearErr := 10.0
+	if linear.Y != 0.0 {
+		linearErr = math.Abs(linear.Y) * 0.3
+	}
+
+	angularErr := 10.0
+	if angular.Z != 0.0 {
+		angularErr = math.Abs(angular.Z) * 0.3
+	}
+
 	// verify average speed is approximately requested speed
-	if !rdkutils.Float64AlmostEqual(linear.Y, avgLinear*1000, 25) || !rdkutils.Float64AlmostEqual(angular.Z, avgAngular, 10) {
-		return fmt.Errorf("measured velocity (linear: %v, angular: %v) did not equal requested velocity (linear: %v, angular: %v)", avgLinear*1000, avgAngular, linear.Y, linear.Z)
+	if !rdkutils.Float64AlmostEqual(linear.Y, avgLinear*1000, linearErr) || !rdkutils.Float64AlmostEqual(angular.Z, avgAngular, angularErr) {
+		return fmt.Errorf("measured velocity (linear: %v, angular: %v) did not equal requested velocity (linear: %v, angular: %v)", avgLinear*1000, avgAngular, linear.Y, angular.Z)
 	}
 	return nil
+}
+
+func moveStraightTest(base base.Base, odometry movementsensor.MovementSensor, distance, speed float64, testSpeed bool) error {
+	dir := sign(distance * speed)
+	startPos, _, err := odometry.Position(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	var linVel float64
+	if testSpeed {
+		go func() error {
+			time.Sleep(1 * time.Second)
+			timeEst := math.Abs(distance / speed)
+			// sample linear velocity
+			for i := 0.0; i < timeEst; i++ {
+				linearVelocity, err := odometry.LinearVelocity(context.Background(), nil)
+				if err != nil {
+					return err
+				}
+				// check if desired speed has been reached
+				if rdkutils.Float64AlmostEqual(linearVelocity.Y*1000.0, math.Abs(speed)*dir, 10) {
+					linVel = linearVelocity.Y
+					return nil
+				}
+				time.Sleep(1 * time.Second)
+			}
+			return nil
+		}()
+	}
+
+	if err := base.MoveStraight(context.Background(), int(distance), speed, nil); err != nil {
+		return err
+	}
+
+	endPos, _, err := odometry.Position(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	totalDist := startPos.GreatCircleDistance(endPos) * 1000000.0
+
+	// verify distance is approximately requested distance
+	if !rdkutils.Float64AlmostEqual(totalDist*dir, distance, math.Abs(distance*0.3)) {
+		return fmt.Errorf("measured distance %v did not equal requested distance %v", totalDist*dir, distance)
+	}
+
+	if testSpeed {
+		// verify speed is approximately requested speed
+		if !rdkutils.Float64AlmostEqual(linVel*1000, math.Abs(speed)*dir, math.Abs(speed*0.3)) {
+			return fmt.Errorf("measured speed %v did not equal requested speed %v", linVel*1000, speed)
+		}
+	}
+
+	return nil
+}
+
+func spinTest(base base.Base, odometry movementsensor.MovementSensor, distance, speed float64, testSpeed bool) error {
+	dir := sign(distance * speed)
+	startPos, err := odometry.Orientation(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	var angVel float64
+	if testSpeed {
+		go func() error {
+			time.Sleep(1 * time.Second)
+			timeEst := math.Abs(distance / speed)
+			// sample angular velocity
+			for i := 0.0; i < timeEst; i++ {
+				angularVelocity, err := odometry.AngularVelocity(context.Background(), nil)
+				if err != nil {
+					return err
+				}
+				// check if desired speed has been reached
+				if rdkutils.Float64AlmostEqual(angularVelocity.Z*1000.0, math.Abs(speed)*dir, 10) {
+					angVel = angularVelocity.Z
+					return nil
+				}
+				time.Sleep(1 * time.Second)
+			}
+			return nil
+		}()
+	}
+
+	if err := base.Spin(context.Background(), distance, speed, nil); err != nil {
+		return err
+	}
+
+	endPos, err := odometry.Orientation(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	totalDist := endPos.OrientationVectorDegrees().Theta - startPos.OrientationVectorDegrees().Theta
+
+	// verify distance is approximately requested distance
+	if !rdkutils.Float64AlmostEqual(totalDist, distance, math.Abs(distance*0.3)) {
+		return fmt.Errorf("measured distance %v did not equal requested distance %v", totalDist, distance)
+	}
+
+	if testSpeed {
+		// verify speed is approximately requested speed
+		if !rdkutils.Float64AlmostEqual(angVel, math.Abs(speed)*dir, math.Abs(speed*0.3)) {
+			return fmt.Errorf("measured speed %v did not equal requested speed %v", angVel, speed)
+		}
+	}
+
+	return nil
+}
+
+func setPowerTest(base base.Base, power float64) error {
+	if err := base.SetPower(context.Background(), r3.Vector{Y: power}, r3.Vector{Z: 1 - power}, nil); err != nil {
+		return err
+	}
+
+	time.Sleep(1 * time.Second)
+	powered, err := base.IsMoving(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if !powered {
+		return fmt.Errorf("base is not powered (linear = %v, angular = %v)", power, 1-power)
+	}
+
+	if err := base.Stop(context.Background(), nil); err != nil {
+		return err
+	}
+	powered, err = base.IsMoving(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if powered {
+		return fmt.Errorf("base did not stop with linear = %v, angular = %v", power, 1-power)
+	}
+
+	return nil
+}
+
+func sign(num float64) float64 {
+	if num < 0.0 {
+		return -1.0
+	}
+	return 1.0
 }
