@@ -696,7 +696,6 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor) {
 	for _, s := range gridPath {
 		switch s {
 		case "long-straight":
-			logger.Error("LONG STRAIGHT")
 			desDist = 1500.0
 
 			if lastAng == 0 || lastAng == 360 {
@@ -739,7 +738,6 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor) {
 			}
 
 		case "short-straight":
-			logger.Error("SHORT STRAIGHT")
 			desDist = 500.0
 
 			if lastAng == 0 || lastAng == 360 {
@@ -782,7 +780,6 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor) {
 			}
 
 		case "left":
-			logger.Error("LEFT")
 			desAng = 90
 			lastAng += desAng
 			if lastAng > 360 {
@@ -817,7 +814,6 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor) {
 			}
 
 		case "right":
-			logger.Error("RIGHT")
 			desAng = -90
 			lastAng += desAng
 			if lastAng > 360 {
