@@ -31,6 +31,12 @@ var (
 	posExtra           = map[string]interface{}{"return_relative_pos_m": true}
 )
 
+type baseStruct struct {
+	minLinVel float64
+	minAngVel float64
+	baseTests func(base.Base, movementsensor.MovementSensor, float64, float64)
+}
+
 func main() {
 	machine, err := client.New(
 		context.Background(),
@@ -82,13 +88,25 @@ func main() {
 		logger.Error(err)
 	}
 
+	var sb = baseStruct{
+		minLinVel: 50,
+		minAngVel: 15,
+		baseTests: runBaseTests,
+	}
+
+	var wb = baseStruct{
+		minLinVel: 100,
+		minAngVel: 30,
+		baseTests: runBaseTests,
+	}
+
 	// wheeled base tests
 	logger.Info("Starting wheeled base tests...")
-	runBaseTests(wheeledBase, odometry)
+	wb.baseTests(wheeledBase, odometry, wb.minLinVel, wb.minAngVel)
 
 	// sensor base tests
 	logger.Info("Starting sensor controlled base tests...")
-	runBaseTests(sensorBase, odometry)
+	sb.baseTests(sensorBase, odometry, sb.minLinVel, sb.minAngVel)
 
 	// encoded motor tests
 	logger.Info("Starting encoded motor tests...")
@@ -124,12 +142,12 @@ func main() {
 	}
 }
 
-func runBaseTests(b base.Base, odometry movementsensor.MovementSensor) {
+func runBaseTests(b base.Base, odometry movementsensor.MovementSensor, minLinVel, minAngVel float64) {
 	logger.Info("testing SetVelocity")
-	// SetVelocity: linear = 75 mm/s, angular = 0 deg/sec
-	if err := setVelocityTest(b, odometry, r3.Vector{Y: 75.0}, r3.Vector{}); err != nil {
-		logger.Errorf("error setting velocity to linear = 75 mm/s and anguar = 0 deg/sec, err = %v", err)
-		failedTests = append(failedTests, fmt.Errorf("%v SetVelocity: linear = %v, angular = %v", b.Name().ShortName(), 75, 0))
+	// SetVelocity: linear = minLinVel mm/s, angular = 0 deg/sec
+	if err := setVelocityTest(b, odometry, r3.Vector{Y: minLinVel}, r3.Vector{}); err != nil {
+		logger.Errorf("error setting velocity to linear = %v mm/s and anguar = 0 deg/sec, err = %v", minLinVel, err)
+		failedTests = append(failedTests, fmt.Errorf("%v SetVelocity: linear = %v, angular = %v", b.Name().ShortName(), minLinVel, 0))
 	}
 
 	// SetVelocity: linear = 250 mm/s, angular = 0 deg/sec
@@ -138,10 +156,10 @@ func runBaseTests(b base.Base, odometry movementsensor.MovementSensor) {
 		failedTests = append(failedTests, fmt.Errorf("%v SetVelocity: linear = %v, angular = %v", b.Name().ShortName(), -250, 0))
 	}
 
-	// SetVelocity: linear = 0 mm/s, angular = 10 deg/sec
-	if err := setVelocityTest(b, odometry, r3.Vector{}, r3.Vector{Z: -15.0}); err != nil {
-		logger.Errorf("error setting velocity to linear = 0 mm/s and anguar = -15 deg/sec, err = %v", err)
-		failedTests = append(failedTests, fmt.Errorf("%v SetVelocity: linear = %v, angular = %v", b.Name().ShortName(), 0, -15))
+	// SetVelocity: linear = 0 mm/s, angular = minAngVel deg/sec
+	if err := setVelocityTest(b, odometry, r3.Vector{}, r3.Vector{Z: -minAngVel}); err != nil {
+		logger.Errorf("error setting velocity to linear = 0 mm/s and anguar = %v deg/sec, err = %v", -minAngVel, err)
+		failedTests = append(failedTests, fmt.Errorf("%v SetVelocity: linear = %v, angular = %v", b.Name().ShortName(), 0, -minAngVel))
 	}
 
 	// SetVelocity: linear = 0 mm/s, angular = 90 deg/sec
@@ -157,10 +175,10 @@ func runBaseTests(b base.Base, odometry movementsensor.MovementSensor) {
 		failedTests = append(failedTests, fmt.Errorf("%v MoveStraight: distance = %v, speed = %v", b.Name().ShortName(), 100, 50))
 	}
 
-	// MoveStraight: distance = -100 mm, speed = 300 mm/sec
-	if err := moveStraightTest(b, odometry, -100, 300); err != nil {
-		logger.Errorf("error moving straight for -100 mm at 300 mm/sec, err = %v", err)
-		failedTests = append(failedTests, fmt.Errorf("%v MoveStraight: distance = %v, speed = %v", b.Name().ShortName(), -100, 300))
+	// MoveStraight: distance = -100 mm, speed = 250 mm/sec
+	if err := moveStraightTest(b, odometry, -100, 250); err != nil {
+		logger.Errorf("error moving straight for -100 mm at 250 mm/sec, err = %v", err)
+		failedTests = append(failedTests, fmt.Errorf("%v MoveStraight: distance = %v, speed = %v", b.Name().ShortName(), -100, 250))
 	}
 
 	// MoveStraight: distance = 1000 mm, speed = -50 mm/sec
@@ -169,10 +187,10 @@ func runBaseTests(b base.Base, odometry movementsensor.MovementSensor) {
 		failedTests = append(failedTests, fmt.Errorf("%v MoveStraight: distance = %v, speed = %v", b.Name().ShortName(), 1000, -50))
 	}
 
-	// MoveStraight: distance = -1000 mm, speed = -300 mm/sec
-	if err := moveStraightTest(b, odometry, -1000, -300); err != nil {
-		logger.Errorf("error moving straight for -1000 mm at -300 mm/sec, err = %v", err)
-		failedTests = append(failedTests, fmt.Errorf("%v MoveStraight: distance = %v, speed = %v", b.Name().ShortName(), -1000, -300))
+	// MoveStraight: distance = -1000 mm, speed = -250 mm/sec
+	if err := moveStraightTest(b, odometry, -1000, -250); err != nil {
+		logger.Errorf("error moving straight for -1000 mm at -250 mm/sec, err = %v", err)
+		failedTests = append(failedTests, fmt.Errorf("%v MoveStraight: distance = %v, speed = %v", b.Name().ShortName(), -1000, -250))
 	}
 
 	logger.Info("testing Spin")
