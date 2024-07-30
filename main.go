@@ -804,31 +804,10 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor) {
 				lastAng -= 360
 			}
 
-			var theta []float64
-			go func() {
-				theta = sampleAngle(odometry, theta)
-			}()
-
 			err := b.Spin(context.Background(), desAng, desAngVel, nil)
 			if err != nil {
 				logger.Error(err)
 				return
-			}
-
-			for {
-				if theta != nil {
-					break
-				}
-			}
-
-			numSamples := float64(len(theta))
-			rmsNumSamples += numSamples
-			totalDist := desDist
-			var diff float64
-			for i := 0.0; i < numSamples; i++ {
-				// diff = (predicted - actual)^2
-				diff = math.Pow(((totalDist/numSamples)*i)-theta[int(i)], 2)
-				rmsErrorSum += diff
 			}
 
 		case "right":
@@ -838,38 +817,18 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor) {
 				lastAng -= 360
 			}
 
-			var theta []float64
-			go func() {
-				theta = sampleAngle(odometry, theta)
-			}()
-
 			err := b.Spin(context.Background(), desAng, desAngVel, nil)
 			if err != nil {
 				logger.Error(err)
-			}
-
-			for {
-				if theta != nil {
-					break
-				}
-			}
-
-			numSamples := float64(len(theta))
-			rmsNumSamples += numSamples
-			totalDist := desDist
-			var diff float64
-			for i := 0.0; i < numSamples; i++ {
-				// diff = (predicted - actual)^2
-				diff = math.Pow(((totalDist/numSamples)*i)-theta[int(i)], 2)
-				rmsErrorSum += diff
+				return
 			}
 		}
 	}
 
 	rmsErr := math.Sqrt(rmsErrorSum / rmsNumSamples)
 
-	if rmsErr > 250 {
-		logger.Errorf("rms error %v is higher than the minimum allowed error %v", rmsErr, 250)
+	if rmsErr > 150 {
+		logger.Errorf("rms error %v is higher than the minimum allowed error %v", rmsErr, 150)
 		failedTests = append(failedTests, fmt.Errorf("%v grid test", b.Name().ShortName()))
 
 	}
@@ -907,31 +866,6 @@ func samplePosition(odometry movementsensor.MovementSensor, lat, lng []float64, 
 			}
 			lastLng = pos.Lng()
 		}
-	}
-}
-
-func sampleAngle(odometry movementsensor.MovementSensor, theta []float64) []float64 {
-	lastTheta := 0.0
-	for {
-		angVel, err := odometry.AngularVelocity(context.Background(), nil)
-		if err != nil {
-			logger.Error(err)
-			return nil
-		}
-		if angVel.Z != 0 {
-			break
-		}
-	}
-	for {
-		ori, err := odometry.Orientation(context.Background(), posExtra)
-		if err != nil {
-			logger.Error(err)
-		}
-		theta = append(theta, ori.OrientationVectorDegrees().Theta)
-		if ori.OrientationVectorDegrees().Theta == lastTheta {
-			return theta
-		}
-		lastTheta = ori.OrientationVectorDegrees().Theta
 	}
 }
 
