@@ -20,6 +20,12 @@ import (
 	"go.viam.com/rdk/robot/client"
 	rdkutils "go.viam.com/rdk/utils"
 	"go.viam.com/utils/rpc"
+
+	"bytes"
+	"net/http"
+
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/urlfetch"
 )
 
 var (
@@ -55,6 +61,11 @@ func main() {
 
 	defer machine.Close(context.Background())
 
+	runTests(machine)
+
+}
+
+func runTests(machine *client.RobotClient) {
 	// initialize all necessary components
 	var errs error
 	wheeledBase, err := base.FromRobot(machine, "viam_base")
@@ -974,3 +985,16 @@ func sampleBothVel(odometry movementsensor.MovementSensor, goalLinVel, goalAngVe
 		}
 	}
 }
+
+// func postSlackBetaSignup(req *http.Request, msg string) string {
+// 	ctx := appengine.NewContext(req)
+// 	request := urlfetch.Client(ctx)
+// 	data := []byte("{'text': '" + msg + "'}")
+// 	body := bytes.NewReader(data)
+// 	resp, err := request.Post("https://hooks.slack.com/services/<<<YOUR WEBHOOK HERE>>>", "application/json", body)
+// 	if err != nil {
+// 		return err.Error()
+// 	} else {
+// 		return resp.Status
+// 	}
+// }
