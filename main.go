@@ -59,7 +59,6 @@ func main() {
 	defer machine.Close(context.Background())
 
 	runTests(machine)
-
 }
 
 func runTests(machine *client.RobotClient) {
@@ -148,6 +147,7 @@ func runTests(machine *client.RobotClient) {
 			message += (failedTests[i] + "\n")
 		}
 		message += "for more info, see rovercanary.log"
+		sendSlackMessage(message)
 	}
 }
 
