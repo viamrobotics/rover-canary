@@ -144,7 +144,7 @@ func runTests(machine *client.RobotClient) {
 	} else {
 		message := "tests failed: " + fmt.Sprint(len(failedTests)) + "/" + fmt.Sprint(totalTests) + "\n"
 		for i := 0; i < len(failedTests); i++ {
-			message += (failedTests[i] + "\n")
+			message += "- " + (failedTests[i] + "\n")
 		}
 		message += "for more info, see rovercanary.log"
 		sendSlackMessage(message)

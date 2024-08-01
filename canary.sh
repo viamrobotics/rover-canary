@@ -15,7 +15,4 @@ sleep 120 # allow the server enough time to start
 # run the rover canary tests
 cd /home/rover-canary/rover-canary
 sudo go run main.go
-sleep 600 # test should take about 10 mintes
 
-# check for failures
-sudo go run results.go
