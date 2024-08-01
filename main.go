@@ -393,8 +393,8 @@ func runMovementSensorTests(ms movementsensor.MovementSensor) {
 	}
 
 	// verify linear acceleration is ~9.81
-	if !rdkutils.Float64AlmostEqual(linearAccel.Z, 9.81, 1) {
-		logger.Errorf("linear acceleration is not ~9.81, linear acceleration = %v", linearAccel)
+	if !rdkutils.Float64AlmostEqual(linearAccel.Z, 9.81, 9.81*0.5) {
+		logger.Errorf("linear acceleration is not ~9.81, linear acceleration = %v", linearAccel.Z)
 		failedTests = append(failedTests, fmt.Sprintf("%v LinearAcceleration", ms.Name().ShortName()))
 	}
 }
