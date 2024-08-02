@@ -43,13 +43,13 @@ type baseStruct struct {
 func main() {
 	machine, err := client.New(
 		context.Background(),
-		"rover-canary-main.hjyd54x654.viam.cloud",
+		"<MACHINE-ADDRESS>",
 		logger,
 		client.WithDialOptions(rpc.WithEntityCredentials(
-			"a14bc023-9ee8-4a29-bd61-597a0fe11f97",
+			"<API-KEY-ID>",
 			rpc.Credentials{
 				Type:    rpc.CredentialsTypeAPIKey,
-				Payload: "d8nu8bltkbvlx2fini9tjj08sjmno7sd",
+				Payload: "<API-KEY>",
 			})),
 	)
 	if err != nil {
@@ -1139,7 +1139,7 @@ func sendSlackMessage(msg string) {
 	data := []byte("{'text': '" + msg + "'}")
 	body := bytes.NewReader(data)
 
-	req, err := http.NewRequest("POST", "https://hooks.slack.com/services/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", body)
+	req, err := http.NewRequest("POST", "<WEBHOOK>", body)
 	if err != nil {
 		logger.Error(err)
 	}
