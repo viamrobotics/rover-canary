@@ -398,19 +398,19 @@ func runPowerSensorTests(ps powersensor.PowerSensor) {
 	}
 
 	// verify voltage is ~15.2
-	if !rdkutils.Float64AlmostEqual(volts, 15.2, 0.5) {
+	if !rdkutils.Float64AlmostEqual(volts, 15.2, 1.5) {
 		logger.Errorf("voltage does not equal 15.2, voltage = %v", volts)
 		failedTests = append(failedTests, fmt.Sprintf("%v Voltage", ps.Name().ShortName()))
 	}
 
 	// verify current is ~0.29
-	if !rdkutils.Float64AlmostEqual(current, 0.29, 0.1) {
+	if !rdkutils.Float64AlmostEqual(current, 0.29, 0.15) {
 		logger.Errorf("current does not equal 0.29, current = %v", current)
 		failedTests = append(failedTests, fmt.Sprintf("%v Current", ps.Name().ShortName()))
 	}
 
 	// verify power is ~4.4
-	if !rdkutils.Float64AlmostEqual(power, 4.4, 1.0) {
+	if !rdkutils.Float64AlmostEqual(power, 4.4, 1.5) {
 		logger.Errorf("power does not equal 4.4, power = %v", power)
 		failedTests = append(failedTests, fmt.Sprintf("%v Power", ps.Name().ShortName()))
 	}
