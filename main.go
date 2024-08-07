@@ -101,28 +101,36 @@ func runTests(machine *client.RobotClient) {
 	}
 
 	// wheeled base tests
+	logger.Info("Starting wheeled base tests...")
 	wb.baseTests(wheeledBase, odometry, wb.minLinVel, wb.minAngVel)
 
 	// sensor base tests
+	logger.Info("Starting sensor controlled base tests...")
 	sb.baseTests(sensorBase, odometry, sb.minLinVel, sb.minAngVel)
 
 	// encoded motor tests
+	logger.Info("Starting encoded motor tests...")
 	runMotorTests(leftMotor, odometry)
 
 	// controlled motor tests
+	logger.Info("Starting controlled motor tests...")
 	runMotorTests(rightMotor, odometry)
 
 	// single encoder tests
+	logger.Info("Starting encoder tests...")
 	runEncoderTests(leftMotor, leftEncoder)
 	runEncoderTests(rightMotor, rightEncoder)
 
 	// power sensor tests
+	logger.Info("Starting power sensor tests...")
 	runPowerSensorTests(powerSensor)
 
 	// movement sensor tests
+	logger.Info("Starting movement sensor tests...")
 	runMovementSensorTests(movementSensor)
 
 	// grid tests
+	logger.Info("Starting grid test with sensor controlled base...")
 	runGridTest(sensorBase, odometry)
 
 	if len(failedTests) != 0 {
