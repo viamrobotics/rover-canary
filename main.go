@@ -86,6 +86,7 @@ func main() {
 	uploadFiles("./savedImages/wheeled_ms_vels.jpg")
 	uploadFiles("./savedImages/wheeled_spin_degs.jpg")
 	uploadFiles("./savedImages/wheeled_sv_vels.jpg")
+	
 }
 
 func uploadFiles(filename string) {
