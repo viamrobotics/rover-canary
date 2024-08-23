@@ -86,7 +86,17 @@ func main() {
 	uploadFiles("./savedImages/wheeled_ms_vels.jpg")
 	uploadFiles("./savedImages/wheeled_spin_degs.jpg")
 	uploadFiles("./savedImages/wheeled_sv_vels.jpg")
-	
+	uploadFiles("./savedImages/encoded_go_for_rpm.jpg")
+	uploadFiles("./savedImages/encoded_go_for_pos.jpg")
+	uploadFiles("./savedImages/encoded_go_to_rpm.jpg")
+	uploadFiles("./savedImages/encoded_go_to_pos.jpg")
+	uploadFiles("./savedImages/encoded_set_rpm_rpm.jpg")
+	uploadFiles("./savedImages/controlled_go_for_rpm.jpg")
+	uploadFiles("./savedImages/controlled_go_for_pos.jpg")
+	uploadFiles("./savedImages/controlled_go_to_rpm.jpg")
+	uploadFiles("./savedImages/controlled_go_to_pos.jpg")
+	uploadFiles("./savedImages/controlled_set_rpm_rpm.jpg")
+	uploadFiles("./savedImages/grid_test.jpg")
 }
 
 func uploadFiles(filename string) {
