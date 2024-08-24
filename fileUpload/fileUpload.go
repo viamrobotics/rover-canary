@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	pbDataSync "go.viam.com/api/app/datasync/v1"
@@ -24,10 +25,14 @@ func UploadJpeg(
 	ctx context.Context,
 	content *bytes.Buffer,
 	partID string, // you must have the partID for the robot
-	apiKey, apiKeyID string, // i think the robot api key you already use should work, but if it doesn't we can easily up the permissions on that key
+	apiKey, apiKeyID string,
+	componentType string, // component used for the test
 	logger logging.Logger,
 ) (string, error) {
 	syncClient, conn, err := connectToApp(ctx, apiKey, apiKeyID, logger)
+	if err != nil {
+		return "", err
+	}
 	defer conn.Close()
 
 	stream, err := syncClient.FileUpload(ctx)
@@ -44,8 +49,9 @@ func UploadJpeg(
 		FileName:      filepath.Base(imageName),
 		FileExtension: filepath.Ext(imageName),
 		Tags: []string{
-			"TAG1", // generic for all canary uploads
-			"TAG2", // specific for this run
+			"ROVER-CANARY",                          // generic for all canary uploads
+			string(time.Now().Format("2006-01-02")), // specific for this run
+			componentType,                           // specific for the component used in this run
 		},
 	}
 

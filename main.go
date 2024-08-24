@@ -77,37 +77,39 @@ func main() {
 		logger.Error(err)
 		return
 	}
-	uploadFiles("./savedImages/sensor_ms_pos.jpg")
-	uploadFiles("./savedImages/sensor_ms_vels.jpg")
-	uploadFiles("./savedImages/sensor_spin_degs.jpg")
-	uploadFiles("./savedImages/sensor_sv_vels.jpg")
-	uploadFiles("./savedImages/wheeled_ms_pos.jpg")
-	uploadFiles("./savedImages/wheeled_ms_vels.jpg")
-	uploadFiles("./savedImages/wheeled_spin_degs.jpg")
-	uploadFiles("./savedImages/wheeled_sv_vels.jpg")
-	uploadFiles("./savedImages/encoded_go_for_rpm.jpg")
-	uploadFiles("./savedImages/encoded_go_for_pos.jpg")
-	uploadFiles("./savedImages/encoded_go_to_rpm.jpg")
-	uploadFiles("./savedImages/encoded_go_to_pos.jpg")
-	uploadFiles("./savedImages/encoded_set_rpm_rpm.jpg")
-	uploadFiles("./savedImages/controlled_go_for_rpm.jpg")
-	uploadFiles("./savedImages/controlled_go_for_pos.jpg")
-	uploadFiles("./savedImages/controlled_go_to_rpm.jpg")
-	uploadFiles("./savedImages/controlled_go_to_pos.jpg")
-	uploadFiles("./savedImages/controlled_set_rpm_rpm.jpg")
-	uploadFiles("./savedImages/grid_test.jpg")
+	uploadFiles("./savedImages/sensor_ms_pos.jpg", "SENSOR-BASE")
+	uploadFiles("./savedImages/sensor_ms_vels.jpg", "SENSOR-BASE")
+	uploadFiles("./savedImages/sensor_spin_degs.jpg", "SENSOR-BASE")
+	uploadFiles("./savedImages/sensor_sv_vels.jpg", "SENSOR-BASE")
+	uploadFiles("./savedImages/wheeled_ms_pos.jpg", "WHEELED-BASE")
+	uploadFiles("./savedImages/wheeled_ms_vels.jpg", "WHEELED-BASE")
+	uploadFiles("./savedImages/wheeled_spin_degs.jpg", "WHEELED-BASE")
+	uploadFiles("./savedImages/wheeled_sv_vels.jpg", "WHEELED-BASE")
+	uploadFiles("./savedImages/encoded_go_for_rpm.jpg", "ENCODED-MOTOR")
+	uploadFiles("./savedImages/encoded_go_for_pos.jpg", "ENCODED-MOTOR")
+	uploadFiles("./savedImages/encoded_go_to_rpm.jpg", "ENCODED-MOTOR")
+	uploadFiles("./savedImages/encoded_go_to_pos.jpg", "ENCODED-MOTOR")
+	uploadFiles("./savedImages/encoded_set_rpm_rpm.jpg", "ENCODED-MOTOR")
+	uploadFiles("./savedImages/controlled_go_for_rpm.jpg", "CONTROLLED-MOTOR")
+	uploadFiles("./savedImages/controlled_go_for_pos.jpg", "CONTROLLED-MOTOR")
+	uploadFiles("./savedImages/controlled_go_to_rpm.jpg", "CONTROLLED-MOTOR")
+	uploadFiles("./savedImages/controlled_go_to_pos.jpg", "CONTROLLED-MOTOR")
+	uploadFiles("./savedImages/controlled_set_rpm_rpm.jpg", "CONTROLLED-MOTOR")
+	uploadFiles("./savedImages/grid_test.jpg", "GRID")
 }
 
-func uploadFiles(filename string) {
+// upload a file to viam app
+func uploadFiles(filename, component string) {
 	img, err := os.ReadFile(filename)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 	bytes := bytes.NewBuffer(img)
-	fileupload.UploadJpeg(context.Background(), bytes, partID, apikey, apikeyid, logger)
+	fileupload.UploadJpeg(context.Background(), bytes, partID, apikey, apikeyid, component, logger)
 }
 
+// create the necessary file for the current test
 func initializeFiles(path string) *os.File {
 	fileLocation := path
 	files, _ := os.ReadDir(fileLocation)
@@ -162,7 +164,6 @@ func runTests(machine *client.RobotClient) {
 	}
 
 	startTime = time.Now()
-	// go logEverything(context.Background(), startTime)
 
 	f := initializeFiles("./wheeledDes")
 	defer f.Close()
@@ -616,8 +617,6 @@ func moveStraightTest(b base.Base, odometry movementsensor.MovementSensor, dista
 		return err
 	}
 
-	// ori, _ := odometry.Orientation(context.Background(), nil)
-	// desEndPoint := startPos.PointAtDistanceAndBearing(distance, ori.OrientationVectorDegrees().Theta)
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v\n", "ms", math.Abs(speed)*dir, 0.0, time.Since(startTime).Milliseconds(), startPos.Lat()+distance, startPos.Lng()))
 
 	totalDist := startPos.GreatCircleDistance(endPos) * 1000000.0
