@@ -23,3 +23,16 @@ go.work.sum
 
 # Text file with secrets and links
 secrets.txt
+
+# data and des folders and files
+controlledData/
+controlledDes/
+encodedData/
+encodedDes/
+gridData/
+gridDes/
+savedImages/
+sensorData/
+sensorDes/
+wheeledData/
+wheeledDes/

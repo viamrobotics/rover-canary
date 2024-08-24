@@ -39,11 +39,10 @@ var (
 )
 
 const (
-	// replace these two constant with your robot's address and secret
-	// before running main
-	address  = "<MACHING-ADDRESS>"
-	apikeyid = "<API-KEY-ID"
-	apikey   = "<API-KEY"
+	// replace these constants with your machine's info before running main
+	address  = "<MACHINE-ADDRESS>"
+	apikeyid = "<API-KEY-ID>"
+	apikey   = "<API-KEY>"
 	partID   = "<PART-ID>"
 )
 
