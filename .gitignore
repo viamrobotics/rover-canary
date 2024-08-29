@@ -24,7 +24,7 @@ go.work.sum
 # Text file with secrets and links
 secrets.txt
 
-# data and des files
+# data and des files, and images
 controlledData/*
 controlledDes/*
 encodedData/*
