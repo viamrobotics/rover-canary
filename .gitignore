@@ -23,3 +23,16 @@ go.work.sum
 
 # Text file with secrets and links
 secrets.txt
+
+# data and des files, and images
+controlledData/run*
+controlledDes/run*
+encodedData/run*
+encodedDes/run*
+gridData/run*
+gridDes/run*
+savedImages/*.jpg
+sensorData/run*
+sensorDes/run*
+wheeledData/run*
+wheeledDes/run*
