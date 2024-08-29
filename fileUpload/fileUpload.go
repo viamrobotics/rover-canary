@@ -3,12 +3,12 @@ package fileupload
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/url"
 	"path/filepath"
 	"time"
 
-	"github.com/pkg/errors"
 	pbDataSync "go.viam.com/api/app/datasync/v1"
 	"go.viam.com/rdk/logging"
 	"go.viam.com/utils/rpc"
@@ -66,12 +66,12 @@ func UploadJpeg(
 	}
 
 	if err := sendFileUploadRequests(ctx, stream, content); err != nil {
-		return "", errors.Wrap(err, "error syncing image")
+		return "", errors.Join(err, errors.New("error syncing image"))
 	}
 
 	res, err := stream.CloseAndRecv()
 	if err != nil {
-		return "", errors.Wrap(err, "received error response while syncing image")
+		return "", errors.Join(err, errors.New("received error response while syncing image"))
 	}
 
 	return res.GetFileId(), nil

@@ -25,14 +25,14 @@ go.work.sum
 secrets.txt
 
 # data and des folders and files
-controlledData/
-controlledDes/
-encodedData/
-encodedDes/
-gridData/
-gridDes/
-savedImages/
-sensorData/
-sensorDes/
-wheeledData/
-wheeledDes/
+controlledData/*
+controlledDes/*
+encodedData/*
+encodedDes/*
+gridData/*
+gridDes/*
+savedImages/*
+sensorData/*
+sensorDes/*
+wheeledData/*
+wheeledDes/*
