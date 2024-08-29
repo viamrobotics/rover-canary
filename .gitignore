@@ -31,7 +31,7 @@ encodedData/run*
 encodedDes/run*
 gridData/run*
 gridDes/run*
-savedImages/*
+savedImages/*.jpg
 sensorData/run*
 sensorDes/run*
 wheeledData/run*
