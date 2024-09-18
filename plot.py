@@ -4,6 +4,7 @@ import math
 import os
 import glob
 import sys
+import numpy as np
 
 use_relative = True
 
@@ -24,13 +25,14 @@ def plot_wheeled_base(run_num: str, dir_path: str):
     time_set_vel = []
     lin_vel_move_straight = []
     ang_vel_move_straight = []
-    posX_move_straight = []
-    posY_move_straight = []
+    posX_move_straight = np.empty(shape=(4, 0)).tolist()
+    posY_move_straight = np.empty(shape=(4, 0)).tolist()
     time_move_straight = []
     spin_lin_vel = []
     spin_ang_vel = []
-    spin_theta = []
-    time_spin = []
+    spin_theta = np.empty(shape=(4, 0)).tolist()
+    spin_count = -1
+    ms_count = -1
 
     for i, lines in enumerate(csv_file):
         match lines[0]:
@@ -42,13 +44,16 @@ def plot_wheeled_base(run_num: str, dir_path: str):
                 lin_vel_move_straight.append(float(lines[1]))
                 ang_vel_move_straight.append(float(lines[2]))
                 time_move_straight.append(float(lines[3])/1000)
-                posX_move_straight.append(float(lines[4])*1000)
-                posY_move_straight.append(float(lines[5])*1000)
+                if float(lines[1]) == 0 and float(lines[2]) == 0 and float(lines[4]) == 0:
+                    ms_count = ms_count + 1
+                posX_move_straight[ms_count].append(float(lines[4])*1000)
+                posY_move_straight[ms_count].append((float(lines[5]))*1000+ms_count*100)
             case "s":
                 spin_lin_vel.append(float(lines[1]))
                 spin_ang_vel.append(float(lines[2]))
-                time_spin.append(float(lines[3])/1000)
-                spin_theta.append(float(lines[6]))
+                if float(lines[6]) == 0:
+                    spin_count = spin_count + 1
+                spin_theta[spin_count].append((float(lines[6])))
 
     path_desired = dir_path + f'/wheeledDes/run{run_num}.txt'
     f2 = open(path_desired, mode="r")
@@ -58,13 +63,14 @@ def plot_wheeled_base(run_num: str, dir_path: str):
     time_set_vel_des = []
     lin_vel_move_straight_des = []
     ang_vel_move_straight_des = []
-    posX_move_straight_des = []
-    posY_move_straight_des = []
+    posX_move_straight_des = np.empty(shape=(4, 0)).tolist()
+    posY_move_straight_des = np.empty(shape=(4, 0)).tolist()
     time_move_straight_des = []
     spin_lin_vel_des = []
     spin_ang_vel_des = []
-    spin_theta_des = []
-    time_spin_des = []
+    spin_theta_des = np.empty(shape=(4, 0)).tolist()
+    ms_count = -1
+    spin_count = -1
 
     for i, lines in enumerate(csv_file):
         match lines[0]:
@@ -76,18 +82,26 @@ def plot_wheeled_base(run_num: str, dir_path: str):
                 lin_vel_move_straight_des.append(float(lines[1]))
                 ang_vel_move_straight_des.append(float(lines[2]))
                 time_move_straight_des.append(float(lines[3])/1000)
-                posX_move_straight_des.append(float(lines[4])/10)
-                posY_move_straight_des.append(float(lines[5])/10)
+                if float(lines[4]) == 0 and float(lines[1]) == 0:
+                    ms_count = ms_count + 1
+                elif float(lines[4]) == 0 and float(lines[1]) != 0:
+                    continue
+                else:
+                    if float(lines[4]) > 0:
+                        posX_move_straight_des[ms_count] = np.arange(0, float(lines[4])+1, 10).tolist()
+                    else:
+                        posX_move_straight_des[ms_count] = np.arange(float(lines[4]), 1, 10).tolist()
+                    posY_move_straight_des[ms_count] = np.full(np.shape(posX_move_straight_des[ms_count]), ms_count*100).tolist()
             case "s":
                 spin_lin_vel_des.append(float(lines[1]))
                 spin_ang_vel_des.append(float(lines[2]))
-                time_spin_des.append(float(lines[3])/1000)
-                if float(lines[6]) == -30:
-                    spin_theta_des.append(360 + float(lines[6]))
-                elif float(lines[6]) < -355:
-                    spin_theta_des.append(0)
+                if float(lines[6]) == 0:
+                    spin_count = spin_count + 1
                 else:
-                    spin_theta_des.append(float(lines[6]))
+                    if float(lines[6]) > 0:
+                        spin_theta_des[spin_count] = np.arange(0, float(lines[6])+1, 0.01)
+                    else:
+                        spin_theta_des[spin_count] = np.arange(float(lines[6]), 1, 0.01)
 
     _, axs = plt.subplots(2)
     plt.title("SetVelocity Linear and Angular Velocities (Wheeled Base)")
@@ -117,23 +131,32 @@ def plot_wheeled_base(run_num: str, dir_path: str):
 
     _, axsPos = plt.subplots(1)
     plt.title("MoveStraight Position (Wheeled Base)")
-    axsPos.set_ylabel("Meters/Y")
-    axsPos.set_xlabel("Meters/X")
-    axsPos.plot(posY_move_straight, posX_move_straight, 'r.')
-    axsPos.plot(posY_move_straight, posX_move_straight, 'r', label="actual")
-    axsPos.plot(posY_move_straight_des, posX_move_straight_des, 'b', label="desired")
+    axsPos.set_ylabel("Meters/X")
+    axsPos.set_xlabel("Meters/Y")
+    colors = ['c', 'g', 'y', 'r']
+    i = 0
+    for _ in posX_move_straight_des:
+        axsPos.plot(posY_move_straight_des[i], posX_move_straight_des[i], 'b', label="desired y="+str((i+1)*100))
+        axsPos.plot(posY_move_straight[i], posX_move_straight[i], colors[i]+'.')
+        axsPos.plot(posY_move_straight[i], posX_move_straight[i], colors[i], label="actual ="+str(i+1))
+        i = i + 1
     axsPos.axis("equal")
     plt.legend()
     plt.savefig("./savedImages/wheeled_ms_pos.jpg")
 
     _, axs2 = plt.subplots(1)
     plt.title("Spin Angle (Wheeled Base)")
-    axs2.set_ylabel("theta (degrees)")
-    axs2.plot(time_spin, spin_theta, 'r.')
-    axs2.plot(time_spin, spin_theta, 'r', label="actual")
-    axs2.plot(time_spin_des, spin_theta_des, 'b', label="desired")
+    colors = ['c', 'g', 'y', 'r']
+    i = 0
+    for data in spin_theta:
+        axs2.plot(np.cos(spin_theta_des[i])*(i+1), np.sin(spin_theta_des[i])*(i+1), 'b', label="desired r="+str(i+1))
+        axs2.plot(np.cos(data)*(i+1), np.sin(data)*(i+1), colors[i]+'.')
+        axs2.plot(np.cos(data)*(i+1), np.sin(data)*(i+1), colors[i], label="actual "+str(i+1))
+        i = i + 1
+    axs2.axis("equal")
     plt.legend()
     plt.savefig("./savedImages/wheeled_spin_degs.jpg")
+    plt.show()
 
 
 def plot_sensor_base(run_num: str, dir_path: str):
@@ -145,13 +168,14 @@ def plot_sensor_base(run_num: str, dir_path: str):
     time_set_vel = []
     lin_vel_move_straight = []
     ang_vel_move_straight = []
-    posX_move_straight = []
-    posY_move_straight = []
+    posX_move_straight = np.empty(shape=(4, 0)).tolist()
+    posY_move_straight = np.empty(shape=(4, 0)).tolist()
     time_move_straight = []
     spin_lin_vel = []
     spin_ang_vel = []
-    spin_theta = []
-    time_spin = []
+    spin_theta = np.empty(shape=(4, 0)).tolist()
+    spin_count = -1
+    ms_count = -1
 
     for i, lines in enumerate(csv_file):
         match lines[0]:
@@ -163,13 +187,16 @@ def plot_sensor_base(run_num: str, dir_path: str):
                 lin_vel_move_straight.append(float(lines[1]))
                 ang_vel_move_straight.append(float(lines[2]))
                 time_move_straight.append(float(lines[3])/1000)
-                posX_move_straight.append(float(lines[4])*1000)
-                posY_move_straight.append(float(lines[5])*1000)
+                if float(lines[1]) == 0 and float(lines[2]) == 0 and float(lines[4]) == 0:
+                    ms_count = ms_count + 1
+                posX_move_straight[ms_count].append(float(lines[4])*1000)
+                posY_move_straight[ms_count].append((float(lines[5]))*1000+ms_count*100)
             case "s":
                 spin_lin_vel.append(float(lines[1]))
                 spin_ang_vel.append(float(lines[2]))
-                time_spin.append(float(lines[3])/1000)
-                spin_theta.append(float(lines[6]))
+                if float(lines[6]) == 0:
+                    spin_count = spin_count + 1
+                spin_theta[spin_count].append((float(lines[6])))
 
     path_desired = dir_path + f'/sensorDes/run{run_num}.txt'
     f2 = open(path_desired, mode="r")
@@ -179,13 +206,14 @@ def plot_sensor_base(run_num: str, dir_path: str):
     time_set_vel_des = []
     lin_vel_move_straight_des = []
     ang_vel_move_straight_des = []
-    posX_move_straight_des = []
-    posY_move_straight_des = []
+    posX_move_straight_des = np.empty(shape=(4, 0)).tolist()
+    posY_move_straight_des = np.empty(shape=(4, 0)).tolist()
     time_move_straight_des = []
     spin_lin_vel_des = []
     spin_ang_vel_des = []
-    spin_theta_des = []
-    time_spin_des = []
+    spin_theta_des = np.empty(shape=(4, 0)).tolist()
+    ms_count = -1
+    spin_count = -1
 
     for i, lines in enumerate(csv_file):
         match lines[0]:
@@ -197,18 +225,26 @@ def plot_sensor_base(run_num: str, dir_path: str):
                 lin_vel_move_straight_des.append(float(lines[1]))
                 ang_vel_move_straight_des.append(float(lines[2]))
                 time_move_straight_des.append(float(lines[3])/1000)
-                posX_move_straight_des.append(float(lines[4])/10)
-                posY_move_straight_des.append(float(lines[5])/10)
+                if float(lines[4]) == 0 and float(lines[1]) == 0:
+                    ms_count = ms_count + 1
+                elif float(lines[4]) == 0 and float(lines[1]) != 0:
+                    continue
+                else:
+                    if float(lines[4]) > 0:
+                        posX_move_straight_des[ms_count] = np.arange(0, float(lines[4])+1, 10).tolist()
+                    else:
+                        posX_move_straight_des[ms_count] = np.arange(float(lines[4]), 1, 10).tolist()
+                    posY_move_straight_des[ms_count] = np.full(np.shape(posX_move_straight_des[ms_count]), ms_count*100).tolist()
             case "s":
                 spin_lin_vel_des.append(float(lines[1]))
                 spin_ang_vel_des.append(float(lines[2]))
-                time_spin_des.append(float(lines[3])/1000)
-                if float(lines[6]) == -30:
-                    spin_theta_des.append(360 + float(lines[6]))
-                elif float(lines[6]) < -355:
-                    spin_theta_des.append(0)
+                if float(lines[6]) == 0:
+                    spin_count = spin_count + 1
                 else:
-                    spin_theta_des.append(float(lines[6]))
+                    if float(lines[6]) > 0:
+                        spin_theta_des[spin_count] = np.arange(0, float(lines[6])+1, 0.01)
+                    else:
+                        spin_theta_des[spin_count] = np.arange(float(lines[6]), 1, 0.01)
 
     _, axs = plt.subplots(2)
     plt.title("SetVelocity Linear and Angular Velocities (Sensor Base)")
@@ -238,22 +274,33 @@ def plot_sensor_base(run_num: str, dir_path: str):
 
     _, axsPos = plt.subplots(1)
     plt.title("MoveStraight Position (Sensor Base)")
-    axsPos.set_ylabel("Meters/Y")
-    axsPos.set_xlabel("Meters/X")
-    axsPos.plot(posY_move_straight, posX_move_straight, 'r.')
-    axsPos.plot(posY_move_straight, posX_move_straight, 'r', label="actual")
-    axsPos.plot(posY_move_straight_des, posX_move_straight_des, 'b', label="desired")
+    axsPos.set_ylabel("Meters/X")
+    axsPos.set_xlabel("Meters/Y")
+    colors = ['c', 'g', 'y', 'r']
+    i = 0
+    for _ in posX_move_straight_des:
+        axsPos.plot(posY_move_straight_des[i], posX_move_straight_des[i], 'b', label="desired y="+str((i+1)*100))
+        axsPos.plot(posY_move_straight[i], posX_move_straight[i], colors[i]+'.')
+        axsPos.plot(posY_move_straight[i], posX_move_straight[i], colors[i], label="actual ="+str(i+1))
+        i = i + 1
     axsPos.axis("equal")
+    plt.legend
     plt.savefig("./savedImages/sensor_ms_pos.jpg")
 
     _, axs2 = plt.subplots(1)
     plt.title("Spin Angle (Sensor Base)")
     axs2.set_ylabel("theta (degrees)")
-    axs2.plot(time_spin, spin_theta, 'r.')
-    axs2.plot(time_spin, spin_theta, 'r', label="actual")
-    axs2.plot(time_spin_des, spin_theta_des, 'b', label="desired")
+    colors = ['c', 'g', 'y', 'r']
+    i = 0
+    for data in spin_theta:
+        axs2.plot(np.cos(spin_theta_des[i])*(i+1), np.sin(spin_theta_des[i])*(i+1), 'b', label="desired r="+str(i+1))
+        axs2.plot(np.cos(data)*(i+1), np.sin(data)*(i+1), colors[i]+'.')
+        axs2.plot(np.cos(data)*(i+1), np.sin(data)*(i+1), colors[i], label="actual "+str(i+1))
+        i = i + 1
+    axs2.axis("equal")
     plt.legend()
     plt.savefig("./savedImages/sensor_spin_degs.jpg")
+    plt.show()
 
 
 def plot_encoded_motor(run_num: str, dir_path: str):
@@ -273,11 +320,11 @@ def plot_encoded_motor(run_num: str, dir_path: str):
         match lines[0]:
             case "gf":
                 rpm_go_for.append(float(lines[1]))
-                pos_go_for.append(float(lines[2]))
+                pos_go_for.append(float(lines[4]))
                 time_go_for.append(float(lines[3])/1000)
             case "gt":
                 rpm_go_to.append(float(lines[1]))
-                pos_go_to.append(float(lines[2]))
+                pos_go_to.append(float(lines[4]))
                 time_go_to.append(float(lines[3])/1000)
             case "rpm":
                 rpm_set_rpm.append(float(lines[1]))
@@ -299,11 +346,11 @@ def plot_encoded_motor(run_num: str, dir_path: str):
         match lines[0]:
             case "gf":
                 rpm_go_for_des.append(float(lines[1]))
-                pos_go_for_des.append(float(lines[2]))
+                pos_go_for_des.append(float(lines[4]))
                 time_go_for_des.append(float(lines[3])/1000)
             case "gt":
                 rpm_go_to_des.append(float(lines[1]))
-                pos_go_to_des.append(float(lines[2]))
+                pos_go_to_des.append(float(lines[4]))
                 time_go_to_des.append(float(lines[3])/1000)
             case "rpm":
                 rpm_set_rpm_des.append(float(lines[1]))
@@ -358,6 +405,7 @@ def plot_encoded_motor(run_num: str, dir_path: str):
     axs1.plot(time_set_rpm_des, rpm_set_rpm_des, 'b', label="desired")
     plt.legend()
     plt.savefig("./savedImages/encoded_set_rpm_rpm.jpg")
+    plt.show()
 
 
 def plot_controlled_motor(run_num: str, dir_path: str):
@@ -377,11 +425,11 @@ def plot_controlled_motor(run_num: str, dir_path: str):
         match lines[0]:
             case "gf":
                 rpm_go_for.append(float(lines[1]))
-                pos_go_for.append(float(lines[2]))
+                pos_go_for.append(float(lines[4]))
                 time_go_for.append(float(lines[3])/1000)
             case "gt":
                 rpm_go_to.append(float(lines[1]))
-                pos_go_to.append(float(lines[2]))
+                pos_go_to.append(float(lines[4]))
                 time_go_to.append(float(lines[3])/1000)
             case "rpm":
                 rpm_set_rpm.append(float(lines[1]))
@@ -403,11 +451,11 @@ def plot_controlled_motor(run_num: str, dir_path: str):
         match lines[0]:
             case "gf":
                 rpm_go_for_des.append(float(lines[1]))
-                pos_go_for_des.append(float(lines[2]))
+                pos_go_for_des.append(float(lines[4]))
                 time_go_for_des.append(float(lines[3])/1000)
             case "gt":
                 rpm_go_to_des.append(float(lines[1]))
-                pos_go_to_des.append(float(lines[2]))
+                pos_go_to_des.append(float(lines[4]))
                 time_go_to_des.append(float(lines[3])/1000)
             case "rpm":
                 rpm_set_rpm_des.append(float(lines[1]))
@@ -462,6 +510,8 @@ def plot_controlled_motor(run_num: str, dir_path: str):
     axs1.plot(time_go_to_des, rpm_go_to_des, 'b', label="desired")
     plt.legend()
     plt.savefig("./savedImages/controlled_set_rpm_rpm.jpg")
+    plt.show()
+
 
 def plot_grid_test(run_num: str, dir_path: str):
     path_data = dir_path + f'/gridData/run{run_num}.txt'
@@ -499,6 +549,8 @@ def plot_grid_test(run_num: str, dir_path: str):
     axsPos.plot(posY_des, posX_des, 'b', label="desired")
     axsPos.axis("equal")
     plt.savefig("./savedImages/grid_test.jpg")
+    plt.show()
+
 
 if __name__ == '__main__':
     # get the current directory
