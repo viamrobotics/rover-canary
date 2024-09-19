@@ -44,14 +44,14 @@ def plot_wheeled_base(run_num: str, dir_path: str):
                 lin_vel_move_straight.append(float(lines[1]))
                 ang_vel_move_straight.append(float(lines[2]))
                 time_move_straight.append(float(lines[3])/1000)
-                if float(lines[1]) == 0 and float(lines[2]) == 0 and float(lines[4]) == 0:
+                if lines[1] == "000" and lines[2] == "000" and lines[4] == "000":
                     ms_count = ms_count + 1
                 posX_move_straight[ms_count].append(float(lines[4])*1000)
                 posY_move_straight[ms_count].append((float(lines[5]))*1000+ms_count*100)
             case "s":
                 spin_lin_vel.append(float(lines[1]))
                 spin_ang_vel.append(float(lines[2]))
-                if float(lines[6]) == 0:
+                if lines[6] == "000":
                     spin_count = spin_count + 1
                 spin_theta[spin_count].append((float(lines[6])))
 
@@ -187,14 +187,15 @@ def plot_sensor_base(run_num: str, dir_path: str):
                 lin_vel_move_straight.append(float(lines[1]))
                 ang_vel_move_straight.append(float(lines[2]))
                 time_move_straight.append(float(lines[3])/1000)
-                if float(lines[1]) == 0 and float(lines[2]) == 0 and float(lines[4]) == 0:
+                if lines[1] == "000" and lines[2] == "000" and lines[4] == "000":
                     ms_count = ms_count + 1
+                print(ms_count)
                 posX_move_straight[ms_count].append(float(lines[4])*1000)
                 posY_move_straight[ms_count].append((float(lines[5]))*1000+ms_count*100)
             case "s":
                 spin_lin_vel.append(float(lines[1]))
                 spin_ang_vel.append(float(lines[2]))
-                if float(lines[6]) == 0:
+                if lines[6] == "000":
                     spin_count = spin_count + 1
                 spin_theta[spin_count].append((float(lines[6])))
 
