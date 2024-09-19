@@ -300,8 +300,6 @@ func runTests(machine *client.RobotClient) {
 			message += "- " + (failedTests[i] + "\n")
 		}
 		sendSlackMessage(message)
-	} else {
-		sendSlackMessage("all tests passed")
 	}
 }
 
