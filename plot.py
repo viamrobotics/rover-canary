@@ -104,7 +104,7 @@ def plot_wheeled_base(run_num: str, dir_path: str):
                         spin_theta_des[spin_count] = np.arange(float(lines[6]), 1, 0.01)
 
     _, axs = plt.subplots(2)
-    plt.title("SetVelocity Linear and Angular Velocities (Wheeled Base)")
+    axs[0].set_title("SetVelocity Linear and Angular Velocities (Wheeled Base)")
     axs[0].set_ylabel("linear velocity(mm/sec)")
     axs[0].plot(time_set_vel, lin_set_vel, 'r.')
     axs[0].plot(time_set_vel, lin_set_vel, 'r', label="actual")
@@ -117,7 +117,7 @@ def plot_wheeled_base(run_num: str, dir_path: str):
     plt.savefig("./savedImages/wheeled_sv_vels.jpg")
 
     _, axs1 = plt.subplots(2)
-    plt.title("MoveStraight Linear and Angular Velocities (Wheeled Base)")
+    axs1[0].set_title("MoveStraight Linear and Angular Velocities (Wheeled Base)")
     axs1[0].set_ylabel("linear velocity(mm/sec)")
     axs1[0].plot(time_move_straight, lin_vel_move_straight, 'r.')
     axs1[0].plot(time_move_straight, lin_vel_move_straight, 'r', label="actual")
@@ -156,7 +156,7 @@ def plot_wheeled_base(run_num: str, dir_path: str):
     axs2.axis("equal")
     plt.legend()
     plt.savefig("./savedImages/wheeled_spin_degs.jpg")
-    plt.show()
+    # plt.show()
 
 
 def plot_sensor_base(run_num: str, dir_path: str):
@@ -189,7 +189,6 @@ def plot_sensor_base(run_num: str, dir_path: str):
                 time_move_straight.append(float(lines[3])/1000)
                 if lines[1] == "000" and lines[2] == "000" and lines[4] == "000":
                     ms_count = ms_count + 1
-                print(ms_count)
                 posX_move_straight[ms_count].append(float(lines[4])*1000)
                 posY_move_straight[ms_count].append((float(lines[5]))*1000+ms_count*100)
             case "s":
@@ -248,7 +247,7 @@ def plot_sensor_base(run_num: str, dir_path: str):
                         spin_theta_des[spin_count] = np.arange(float(lines[6]), 1, 0.01)
 
     _, axs = plt.subplots(2)
-    plt.title("SetVelocity Linear and Angular Velocities (Sensor Base)")
+    axs[0].set_title("SetVelocity Linear and Angular Velocities (Sensor Base)")
     axs[0].set_ylabel("linear velocity(mm/sec)")
     axs[0].plot(time_set_vel, lin_set_vel, 'r.')
     axs[0].plot(time_set_vel, lin_set_vel, 'r', label="actual")
@@ -261,7 +260,7 @@ def plot_sensor_base(run_num: str, dir_path: str):
     plt.savefig("./savedImages/sensor_sv_vels.jpg")
 
     _, axs1 = plt.subplots(2)
-    plt.title("MoveStraight Linear and Angular Velocities (Sensor Base)")
+    axs1[0].set_title("MoveStraight Linear and Angular Velocities (Sensor Base)")
     axs1[0].set_ylabel("linear velocity(mm/sec)")
     axs1[0].plot(time_move_straight, lin_vel_move_straight, 'r.')
     axs1[0].plot(time_move_straight, lin_vel_move_straight, 'r', label="actual")
@@ -301,7 +300,7 @@ def plot_sensor_base(run_num: str, dir_path: str):
     axs2.axis("equal")
     plt.legend()
     plt.savefig("./savedImages/sensor_spin_degs.jpg")
-    plt.show()
+    # plt.show()
 
 
 def plot_encoded_motor(run_num: str, dir_path: str):
@@ -406,7 +405,7 @@ def plot_encoded_motor(run_num: str, dir_path: str):
     axs1.plot(time_set_rpm_des, rpm_set_rpm_des, 'b', label="desired")
     plt.legend()
     plt.savefig("./savedImages/encoded_set_rpm_rpm.jpg")
-    plt.show()
+    # plt.show()
 
 
 def plot_controlled_motor(run_num: str, dir_path: str):
@@ -511,7 +510,7 @@ def plot_controlled_motor(run_num: str, dir_path: str):
     axs1.plot(time_go_to_des, rpm_go_to_des, 'b', label="desired")
     plt.legend()
     plt.savefig("./savedImages/controlled_set_rpm_rpm.jpg")
-    plt.show()
+    # plt.show()
 
 
 def plot_grid_test(run_num: str, dir_path: str):
@@ -550,7 +549,7 @@ def plot_grid_test(run_num: str, dir_path: str):
     axsPos.plot(posY_des, posX_des, 'b', label="desired")
     axsPos.axis("equal")
     plt.savefig("./savedImages/grid_test.jpg")
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':
