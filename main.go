@@ -872,7 +872,7 @@ func goForTest(m motor.Motor, odometry movementsensor.MovementSensor, rpm, revol
 
 	// verify speed is approximately requested speed
 	if !rdkutils.Float64AlmostEqual(rpmEst, math.Abs(rpm)*dir, math.Abs(rpm*0.5)) {
-		return fmt.Errorf("measured speed %v did not equal requested speed %v", rpmEst, rpm)
+		return fmt.Errorf("measured speed %v did not equal requested speed %v", rpmEst, math.Abs(rpm)*dir)
 	}
 	return nil
 }
