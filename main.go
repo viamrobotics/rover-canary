@@ -583,13 +583,13 @@ func setVelocityTest(b base.Base, odometry movementsensor.MovementSensor, linear
 	// goal velocity start
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v\n", "sv", linear.Y, angular.Z, time.Since(startTime).Milliseconds()))
 
-	sampleCtx, done := context.WithCancel(context.Background())
-	linEst, angEst := sampleEverything(sampleCtx, odometry, nil, linear.Y, angular.Z, 5, data, "sv", done)
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	linEst, angEst := sampleEverything(sampleCtx, odometry, nil, linear.Y, angular.Z, 5, data, "sv", cancel)
+	cancel()
 
 	// goal velocity end
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v\n", "sv", linear.Y, angular.Z, time.Since(startTime).Milliseconds()))
 
-	done()
 	if err := b.Stop(context.Background(), nil); err != nil {
 		return err
 	}
@@ -622,11 +622,11 @@ func consecutiveVelocityTest(b base.Base, odometry movementsensor.MovementSensor
 
 	// first goal velocity
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v\n", "sv", linear1.Y, 0.0, time.Since(startTime).Milliseconds()))
-	sampleCtx, done := context.WithCancel(context.Background())
-	linEst, angEst := sampleEverything(sampleCtx, odometry, nil, linear1.Y, 0.0, 5, data, "sv", done)
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	linEst, angEst := sampleEverything(sampleCtx, odometry, nil, linear1.Y, 0.0, 5, data, "sv", cancel)
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v\n", "sv", linear1.Y, 0.0, time.Since(startTime).Milliseconds()))
 
-	done()
+	cancel()
 	// verify average speed is approximately requested speed
 	if !rdkutils.Float64AlmostEqual(linear1.Y, linEst, linear1.Y*0.5) || !rdkutils.Float64AlmostEqual(0.0, angEst, 15.0) {
 		return fmt.Errorf("measured velocity (linear: %v, angular: %v) did not equal requested velocity (linear: %v, angular: %v)", linEst, angEst, linear1.Y, 0.0)
@@ -642,11 +642,11 @@ func consecutiveVelocityTest(b base.Base, odometry movementsensor.MovementSensor
 
 	// second goal velocity
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v\n", "sv", linear2.Y, 0.0, time.Since(startTime).Milliseconds()))
-	sampleCtx, done = context.WithCancel(context.Background())
-	linEst, angEst = sampleEverything(sampleCtx, odometry, nil, linear2.Y, 0.0, 10, data, "sv", done)
+	sampleCtx, cancel = context.WithCancel(context.Background())
+	linEst, angEst = sampleEverything(sampleCtx, odometry, nil, linear2.Y, 0.0, 10, data, "sv", cancel)
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v\n", "sv", linear2.Y, 0.0, time.Since(startTime).Milliseconds()))
 
-	done()
+	cancel()
 	// verify average speed is approximately requested speed
 	if !rdkutils.Float64AlmostEqual(linear2.Y, linEst, linear2.Y*0.5) || !rdkutils.Float64AlmostEqual(0.0, angEst, 15.0) {
 		return fmt.Errorf("measured velocity (linear: %v, angular: %v) did not equal requested velocity (linear: %v, angular: %v)", linEst, angEst, linear2.Y, 0.0)
@@ -667,16 +667,23 @@ func moveStraightTest(b base.Base, odometry movementsensor.MovementSensor, dista
 	data.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "ms", 0, 0, time.Since(startTime).Milliseconds(), 0, 0, 0))
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "ms", 0, 0, time.Since(startTime).Milliseconds(), 0, 0, 0))
 
-	sampleCtx, done := context.WithCancel(context.Background())
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	done := make(chan bool)
 	var speedEst float64
 	go func() {
-		linEst, _ := sampleEverything(sampleCtx, odometry, nil, math.Abs(speed)*dir, 0.0, math.Abs(distance/speed), data, "ms", done)
+		linEst, _ := sampleEverything(sampleCtx, odometry, nil, math.Abs(speed)*dir, 0.0, math.Abs(distance/speed), data, "ms", cancel)
 		speedEst = linEst
+		done <- true
 	}()
 
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "ms", math.Abs(speed)*dir, 0.0, time.Since(startTime).Milliseconds(), 0, 0, 0))
 	err = b.MoveStraight(context.Background(), int(distance), speed, nil)
-	done()
+
+	// call cancel so sampleEverything returns
+	cancel()
+	// wait for sampleEverything to actually return so speedEst is respected
+	<-done
+
 	if err != nil {
 		return err
 	}
@@ -712,15 +719,22 @@ func spinTest(b base.Base, odometry movementsensor.MovementSensor, distance, spe
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "s", 0.0, math.Abs(speed)*dir, time.Since(startTime).Milliseconds(), 0, 0, 0))
 
 	var speedEst float64
-	sampleCtx, done := context.WithCancel(context.Background())
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	done := make(chan bool)
 	go func() {
-		_, angEst := sampleEverything(sampleCtx, odometry, nil, 0.0, math.Abs(speed)*dir, math.Abs(distance/speed), data, "s", done)
+		_, angEst := sampleEverything(sampleCtx, odometry, nil, 0.0, math.Abs(speed)*dir, math.Abs(distance/speed), data, "s", cancel)
 		speedEst = angEst
+		done <- true
 	}()
 
 	start := time.Now()
 	err := b.Spin(context.Background(), distance, speed, nil)
-	done()
+
+	// call cancel so sampleEverything returns
+	cancel()
+	// wait for sampleEverything to actually return so speedEst is respected
+	<-done
+
 	if err != nil {
 		return err
 	}
@@ -818,17 +832,24 @@ func goForTest(m motor.Motor, odometry movementsensor.MovementSensor, rpm, revol
 		return err
 	}
 
-	sampleCtx, done := context.WithCancel(context.Background())
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	done := make(chan bool)
 	var speedEst float64
 	go func() {
-		linEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*dir, 0.0, math.Abs(revolutions/rpm*60), data, "gf", done)
+		linEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*dir, 0.0, math.Abs(revolutions/rpm*60), data, "gf", cancel)
 		speedEst = linEst
+		done <- true
 	}()
 
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "gf", 0, 0, time.Since(startTime).Milliseconds(), startPos, 0, 0))
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "gf", math.Abs(rpm)*dir, 0, time.Since(startTime).Milliseconds(), startPos, 0, 0))
 	err = m.GoFor(context.Background(), rpm, revolutions, nil)
-	done()
+
+	// call cancel so sampleEverything returns
+	cancel()
+	// wait for sampleEverything to actually return so speedEst is respected
+	<-done
+
 	if err != nil {
 		return err
 	}
@@ -871,17 +892,24 @@ func goToTest(m motor.Motor, odometry movementsensor.MovementSensor, rpm, positi
 	dir := sign((position - startPos) * rpm)
 	goalLinVel := rpm * wheelCircumference / 60
 
-	sampleCtx, done := context.WithCancel(context.Background())
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	done := make(chan bool)
 	go func() {
-		linEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*dir, 0.0, math.Abs((position-startPos)/rpm*60), data, "gt", done)
+		linEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*dir, 0.0, math.Abs((position-startPos)/rpm*60), data, "gt", cancel)
 		speedEst = linEst
+		done <- true
 	}()
 
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "gt", 0, 0, time.Since(startTime).Milliseconds(), startPos, 0, 0))
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "gt", math.Abs(rpm)*dir, 0, time.Since(startTime).Milliseconds(), startPos, 0, 0))
 
 	err = m.GoTo(context.Background(), rpm, position, nil)
-	done()
+
+	// call cancel so sampleEverything returns
+	cancel()
+	// wait for sampleEverything to actually return so speedEst is respected
+	<-done
+
 	if err != nil {
 		return err
 	}
@@ -924,9 +952,9 @@ func setRPMTest(m motor.Motor, odometry movementsensor.MovementSensor, rpm float
 
 	goalLinVel := rpm * wheelCircumference / 60
 
-	sampleCtx, done := context.WithCancel(context.Background())
-	speedEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*sign(rpm), 0.0, 5, data, "rpm", done)
-	done()
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	speedEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*sign(rpm), 0.0, 5, data, "rpm", cancel)
+	cancel()
 
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "rpm", rpm, 0, time.Since(startTime).Milliseconds(), 0, 0, 0))
 
@@ -956,9 +984,9 @@ func consecutiveRPMTest(m motor.Motor, odometry movementsensor.MovementSensor, r
 
 	goalLinVel := rpm1 * wheelCircumference / 60
 
-	sampleCtx, done := context.WithCancel(context.Background())
-	speedEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*sign(rpm1), 0.0, 5, data, "rpm", done)
-	done()
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	speedEst, _ := sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*sign(rpm1), 0.0, 5, data, "rpm", cancel)
+	cancel()
 
 	rpmEst := speedEst / wheelCircumference * 60
 
@@ -980,9 +1008,9 @@ func consecutiveRPMTest(m motor.Motor, odometry movementsensor.MovementSensor, r
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "rpm", rpm2, 0, time.Since(startTime).Milliseconds(), 0, 0, 0))
 
 	goalLinVel = rpm2 * wheelCircumference / 60
-	sampleCtx, done = context.WithCancel(context.Background())
-	speedEst, _ = sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*sign(rpm2), 0.0, 5, data, "rpm", done)
-	done()
+	sampleCtx, cancel = context.WithCancel(context.Background())
+	speedEst, _ = sampleEverything(sampleCtx, odometry, &m, math.Abs(goalLinVel)*sign(rpm2), 0.0, 5, data, "rpm", cancel)
+	cancel()
 
 	des.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", "rpm", rpm2, 0, time.Since(startTime).Milliseconds(), 0, 0, 0))
 
@@ -1045,6 +1073,58 @@ func motorSetPowerTest(m motor.Motor, power float64) error {
 	return nil
 }
 
+func doMoveStraight(odometry movementsensor.MovementSensor, b base.Base, desDist, desVel float64, data *os.File) ([]float64, []float64) {
+	var lat, lng []float64
+	startPos, _, err := odometry.Position(context.Background(), posExtra)
+	if err != nil {
+		logger.Error(err)
+		return lat, lng
+	}
+	data.WriteString(fmt.Sprintf("%.3v,%.3v\n", startPos.Lat(), startPos.Lng()))
+
+	sampleCtx, cancel := context.WithCancel(context.Background())
+	done := make(chan bool)
+	go func() {
+		lat, lng = samplePosition(sampleCtx, odometry, lat, lng, true, data, cancel)
+		done <- true
+	}()
+
+	err = b.MoveStraight(context.Background(), int(desDist), desVel, nil)
+
+	// call cancel so sampleEverything returns
+	cancel()
+	// wait for sampleEverything to actually return so speedEst is respected
+	<-done
+
+	if err != nil {
+		logger.Error(err)
+		return lat, lng
+	}
+
+	endPos, _, err := odometry.Position(context.Background(), posExtra)
+	if err != nil {
+		logger.Error(err)
+		return lat, lng
+	}
+	data.WriteString(fmt.Sprintf("%.3v,%.3v\n", endPos.Lat(), endPos.Lng()))
+	return lat, lng
+}
+
+func doSpin(b base.Base, lastAng, desAng, desAngVel float64) float64 {
+	lastAng += desAng
+	if lastAng > 360 {
+		lastAng -= 360
+	}
+
+	err := b.Spin(context.Background(), desAng, desAngVel, nil)
+	if err != nil {
+		logger.Error(err)
+		return lastAng
+	}
+	time.Sleep(1 * time.Second)
+	return lastAng
+}
+
 func runGridTest(b base.Base, odometry movementsensor.MovementSensor, des, data *os.File) {
 	gridPath := []string{"long-straight", "left", "short-straight", "left", "long-straight", "right", "short-straight", "right", "long-straight", "left", "short-straight", "left", "long-straight"}
 	odometry.DoCommand(context.Background(), map[string]interface{}{"reset": true})
@@ -1066,32 +1146,7 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor, des, data 
 			desDist = 1500.0
 			posLat, posLng = writeDesired(des, posLat, posLng, lastAng, desDist)
 
-			startPos, _, err := odometry.Position(context.Background(), posExtra)
-			if err != nil {
-				logger.Error(err)
-				return
-			}
-			data.WriteString(fmt.Sprintf("%.3v,%.3v\n", startPos.Lat(), startPos.Lng()))
-
-			var lat, lng []float64
-			sampleCtx, done := context.WithCancel(context.Background())
-			go func() {
-				lat, lng = samplePosition(sampleCtx, odometry, lat, lng, true, data, done)
-			}()
-
-			err = b.MoveStraight(context.Background(), int(desDist), desVel, nil)
-			done()
-			if err != nil {
-				logger.Error(err)
-				return
-			}
-
-			endPos, _, err := odometry.Position(context.Background(), posExtra)
-			if err != nil {
-				logger.Error(err)
-				return
-			}
-			data.WriteString(fmt.Sprintf("%.3v,%.3v\n", endPos.Lat(), endPos.Lng()))
+			lat, lng := doMoveStraight(odometry, b, desDist, desVel, data)
 
 			numSamples := float64(len(lat))
 			rmsNumSamples += numSamples
@@ -1110,18 +1165,7 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor, des, data 
 
 			posLat, posLng = writeDesired(des, posLat, posLng, lastAng, desDist)
 
-			var lat, lng []float64
-			sampleCtx, done := context.WithCancel(context.Background())
-			go func() {
-				lat, lng = samplePosition(sampleCtx, odometry, lat, lng, false, data, done)
-			}()
-
-			err := b.MoveStraight(context.Background(), int(desDist), desVel, nil)
-			done()
-			if err != nil {
-				logger.Error(err)
-				return
-			}
+			lat, lng := doMoveStraight(odometry, b, desDist, desVel, data)
 
 			numSamples := float64(len(lng))
 			rmsNumSamples += numSamples
@@ -1137,17 +1181,7 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor, des, data 
 
 		case "left":
 			desAng = 90
-			lastAng += desAng
-			if lastAng > 360 {
-				lastAng -= 360
-			}
-
-			err := b.Spin(context.Background(), desAng, desAngVel, nil)
-			if err != nil {
-				logger.Error(err)
-				return
-			}
-			time.Sleep(1 * time.Second)
+			lastAng = doSpin(b, lastAng, desAng, desAngVel)
 
 		case "right":
 			desAng = -90
@@ -1239,14 +1273,14 @@ func distBetweenAngles(endRad, startRad, originalDist float64) float64 {
 	return total
 }
 
-func sampleEverything(ctx context.Context, odometry movementsensor.MovementSensor, m *motor.Motor, goalLinVel, goalAngVel, timeEst float64, data *os.File, testType string, done func()) (float64, float64) {
+func sampleEverything(ctx context.Context, odometry movementsensor.MovementSensor, m *motor.Motor, goalLinVel, goalAngVel, timeEst float64, data *os.File, testType string, cancel func()) (float64, float64) {
 	bestLin, bestAng := 0.0, 0.0
 	maxLin, maxAng := 0.0, 0.0
 	start := time.Now()
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	for range ticker.C {
-		if done == nil {
+		if cancel == nil {
 			break
 		}
 		linVel, err := odometry.LinearVelocity(ctx, nil)
