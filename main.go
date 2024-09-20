@@ -1200,7 +1200,10 @@ func samplePosition(ctx context.Context, odometry movementsensor.MovementSensor,
 		}
 		pos, _, err := odometry.Position(ctx, posExtra)
 		if err != nil {
-			logger.Error(err)
+			if !errors.Is(err, context.Canceled) {
+				logger.Error(err)
+			}
+			return lat, lng
 		}
 
 		data.WriteString(fmt.Sprintf("%.3v,%.3v\n", pos.Lat(), pos.Lng()))
