@@ -855,6 +855,9 @@ func goToTest(m motor.Motor, odometry movementsensor.MovementSensor, rpm, positi
 		return fmt.Errorf(goToErr, err)
 	}
 
+	// sleep for one interval of wheeled odometry polling so there isn't a large change in position over a short period of time
+	time.Sleep(500 * time.Millisecond)
+
 	startPos, err := m.Position(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf(goToErr, err)
