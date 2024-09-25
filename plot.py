@@ -524,8 +524,8 @@ def plot_grid_test(run_num: str, dir_path: str):
     for i, lines in enumerate(csv_file):
         if i == 0:
             continue
-        posX.append(float(lines[0])*1000)
-        posY.append(float(lines[1])*1000)
+        posX.append(float(lines[4])*1000)
+        posY.append(float(lines[5])*1000)
     
     path_desired = dir_path + f'/gridDes/run{run_num}.txt'
     f2 = open(path_desired, mode="r")
