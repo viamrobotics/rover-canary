@@ -274,8 +274,8 @@ func runTests(machine *client.RobotClient) {
 	f10 := initializeFiles("./gridData")
 	defer f10.Close()
 
-	f9.WriteString("desX,desY\n")
-	f10.WriteString("desX,desY\n")
+	f9.WriteString(headerString)
+	f10.WriteString(headerString)
 
 	// grid tests
 	logger.Info("Starting grid test with sensor controlled base...")
@@ -1051,41 +1051,22 @@ func motorSetPowerTest(m motor.Motor, power float64) error {
 	return nil
 }
 
-func doMoveStraight(odometry movementsensor.MovementSensor, b base.Base, desDist, desVel float64, data *os.File) ([]float64, []float64) {
-	var lat, lng []float64
-	startPos, _, err := odometry.Position(context.Background(), posExtra)
-	if err != nil {
-		logger.Error(err)
-		return lat, lng
-	}
-	data.WriteString(fmt.Sprintf("%.3v,%.3v\n", startPos.Lat(), startPos.Lng()))
-
+func doMoveStraight(odometry movementsensor.MovementSensor, b base.Base, desDist, desVel float64, data *os.File) error {
 	sampleCtx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool)
 	go func() {
-		lat, lng = samplePosition(sampleCtx, odometry, lat, lng, true, data, cancel)
+		_, _ = sampleEverything(sampleCtx, odometry, nil, desVel, 0.0, desDist/desVel, data, "grid", cancel)
 		done <- true
 	}()
 
-	err = b.MoveStraight(context.Background(), int(desDist), desVel, nil)
+	err := b.MoveStraight(context.Background(), int(desDist), desVel, nil)
 
 	// call cancel so sampleEverything returns
 	cancel()
 	// wait for sampleEverything to actually return so speedEst is respected
 	<-done
 
-	if err != nil {
-		logger.Error(err)
-		return lat, lng
-	}
-
-	endPos, _, err := odometry.Position(context.Background(), posExtra)
-	if err != nil {
-		logger.Error(err)
-		return lat, lng
-	}
-	data.WriteString(fmt.Sprintf("%.3v,%.3v\n", endPos.Lat(), endPos.Lng()))
-	return lat, lng
+	return err
 }
 
 func doSpin(b base.Base, lastAng, desAng, desAngVel float64) float64 {
@@ -1107,77 +1088,90 @@ func runGridTest(b base.Base, odometry movementsensor.MovementSensor, des, data 
 	gridPath := []string{"long-straight", "left", "short-straight", "left", "long-straight", "right", "short-straight", "right", "long-straight", "left", "short-straight", "left", "long-straight"}
 	odometry.DoCommand(context.Background(), map[string]interface{}{"reset": true})
 
-	rmsErrorSum := 0.0
-	rmsNumSamples := 0.0
-
 	desVel := 100.0
 	desDist := 0.0
 	desAng := 0.0
 	desAngVel := 30.0
-
 	posLat, posLng := 0.0, 0.0
 	lastAng := 0.0
+
+	var lat, lng, desLat, desLng = []float64{}, []float64{}, []float64{}, []float64{}
+
+	startPos, _, err := odometry.Position(context.Background(), posExtra)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	lat = append(lat, startPos.Lat())
+	lng = append(lng, startPos.Lng())
+	desLat = append(desLat, startPos.Lat())
+	desLng = append(desLng, startPos.Lng())
 
 	for _, s := range gridPath {
 		switch s {
 		case "long-straight":
 			desDist = 1500.0
 			posLat, posLng = writeDesired(des, posLat, posLng, lastAng, desDist)
+			desLat = append(desLat, posLat/1000.0)
+			desLng = append(desLng, posLng/1000.0)
 
-			lat, lng := doMoveStraight(odometry, b, desDist, desVel, data)
-
-			numSamples := float64(len(lat))
-			rmsNumSamples += numSamples
-			totalDist := desDist / 1000
-			var diff float64
-			for i := 0.0; i < numSamples; i++ {
-				predictedPoint := geo.NewPoint(((totalDist / numSamples) * i), posLng/1000)
-				actualPoint := geo.NewPoint(lat[int(i)], lng[int(i)])
-				// diff = (predicted - actual)^2
-				diff = math.Pow(actualPoint.GreatCircleDistance(predictedPoint), 2)
-				rmsErrorSum += diff
+			if err := doMoveStraight(odometry, b, desDist, desVel, data); err != nil {
+				logger.Error(err)
+				return
 			}
+
+			endPos, _, err := odometry.Position(context.Background(), posExtra)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+
+			lat = append(lat, endPos.Lat())
+			lng = append(lng, endPos.Lng())
 
 		case "short-straight":
 			desDist = 500.0
-
 			posLat, posLng = writeDesired(des, posLat, posLng, lastAng, desDist)
+			desLat = append(desLat, posLat/1000.0)
+			desLng = append(desLng, posLng/1000.0)
 
-			lat, lng := doMoveStraight(odometry, b, desDist, desVel, data)
-
-			numSamples := float64(len(lng))
-			rmsNumSamples += numSamples
-			totalDist := desDist / 1000
-			var diff float64
-			for i := 0.0; i < numSamples; i++ {
-				predictedPoint := geo.NewPoint(posLat/1000, ((totalDist / numSamples) * i))
-				actualPoint := geo.NewPoint(lat[int(i)], lng[int(i)])
-				// diff = (predicted - actual)^2
-				diff = math.Pow(actualPoint.GreatCircleDistance(predictedPoint), 2)
-				rmsErrorSum += diff
+			if err := doMoveStraight(odometry, b, desDist, desVel, data); err != nil {
+				logger.Error(err)
+				return
 			}
 
+			endPos, _, err := odometry.Position(context.Background(), posExtra)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+
+			lat = append(lat, endPos.Lat())
+			lng = append(lng, endPos.Lng())
 		case "left":
 			desAng = 90
 			lastAng = doSpin(b, lastAng, desAng, desAngVel)
 
 		case "right":
 			desAng = -90
-			lastAng += desAng
-			if lastAng > 360 {
-				lastAng -= 360
-			}
-
-			err := b.Spin(context.Background(), desAng, desAngVel, nil)
-			if err != nil {
-				logger.Error(err)
-				return
-			}
-			time.Sleep(1 * time.Second)
+			lastAng = doSpin(b, lastAng, desAng, desAngVel)
 		}
 	}
 
-	rmsErr := math.Sqrt(rmsErrorSum / rmsNumSamples)
+	numSamples := len(lat)
+	rmsNumSamples := len(desLat)
+	rmsErrorSum := 0.0
+	var diff float64
+	for i := 0; i < numSamples; i++ {
+		predictedPoint := geo.NewPoint(desLat[i]/1000.0, desLng[i])
+		actualPoint := geo.NewPoint(lat[i], lng[i])
+		// diff = (predicted - actual)^2
+		diff = math.Pow(actualPoint.GreatCircleDistance(predictedPoint), 2)
+		rmsErrorSum += diff
+	}
+
+	rmsErr := math.Sqrt(rmsErrorSum / float64(rmsNumSamples))
 
 	if rmsErr > 150 {
 		storeErr := fmt.Errorf("rms error %v is higher than the minimum allowed error %v", rmsErr, 150)
@@ -1200,42 +1194,6 @@ func writeDesired(file *os.File, posLat, posLng, lastAng, desDist float64) (floa
 	file.WriteString(fmt.Sprintf("%.3v,%.3v\n", posLat, posLng))
 
 	return posLat, posLng
-}
-
-func samplePosition(ctx context.Context, odometry movementsensor.MovementSensor, lat, lng []float64, isLat bool, data *os.File, done func()) ([]float64, []float64) {
-	lastLat, lastLng := 0.0, 0.0
-	ticker := time.NewTicker(tickerDuration)
-	defer ticker.Stop()
-	for range ticker.C {
-		if done == nil {
-			return lat, lng
-		}
-		pos, _, err := odometry.Position(ctx, posExtra)
-		if err != nil {
-			if !errors.Is(err, context.Canceled) {
-				logger.Error(err)
-			}
-			return lat, lng
-		}
-
-		data.WriteString(fmt.Sprintf("%.3v,%.3v\n", pos.Lat(), pos.Lng()))
-
-		lat = append(lat, pos.Lat())
-		lng = append(lng, pos.Lng())
-
-		if isLat {
-			if pos.Lat() == lastLat {
-				return lat, lng
-			}
-			lastLat = pos.Lat()
-		} else {
-			if pos.Lng() == lastLng {
-				return lat, lng
-			}
-			lastLng = pos.Lng()
-		}
-	}
-	return []float64{-1}, []float64{-1}
 }
 
 func sign(num float64) float64 {
