@@ -27,6 +27,7 @@ func UploadJpeg(
 	partID string, // you must have the partID for the robot
 	apiKey, apiKeyID string,
 	componentType string, // component used for the test
+	testType string,
 	logger logging.Logger,
 ) (string, error) {
 	syncClient, conn, err := connectToApp(ctx, apiKey, apiKeyID, logger)
@@ -52,6 +53,7 @@ func UploadJpeg(
 			"ROVER-CANARY",                          // generic for all canary uploads
 			string(time.Now().Format("2006-01-02")), // specific for this run
 			componentType,                           // specific for the component used in this run
+			testType,                                // specific kind of test
 		},
 	}
 

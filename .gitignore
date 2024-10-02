@@ -36,3 +36,5 @@ sensorData/run*
 sensorDes/run*
 wheeledData/run*
 wheeledDes/run*
+
+.venv
