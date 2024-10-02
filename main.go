@@ -288,8 +288,7 @@ func runTests(machine *client.RobotClient) {
 		for i := 0; i < len(failedTests); i++ {
 			message += "- " + (failedTests[i] + "\n")
 		}
-		// sendSlackMessage(message)
-		logger.Info(message)
+		sendSlackMessage(message)
 	}
 }
 
