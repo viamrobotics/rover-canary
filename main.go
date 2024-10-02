@@ -41,7 +41,7 @@ const (
 	ticksPerRotation   = 1992.0
 	wheelCircumference = 381.0
 	totalTests         = 55
-	tickerDuration     = 50 * time.Millisecond
+	tickerDuration     = 100 * time.Millisecond
 	delayBetweenTests  = 1
 	headerString       = "type,linveldes,angveldes,time,posX,posY,theta\n"
 	// replace these constants with your machine's info before running main
@@ -1223,6 +1223,14 @@ func distBetweenAngles(endRad, startRad, originalDist float64) float64 {
 	return total
 }
 
+func average(arr [5]float64) float64 {
+	sum := 0.
+	for _, val := range arr {
+		sum += val
+	}
+	return sum / float64(len(arr))
+}
+
 func sampleEverything(ctx context.Context, odometry movementsensor.MovementSensor, m *motor.Motor, goalLinVel, goalAngVel, timeEst float64, data *os.File, testType string, cancel func()) (float64, float64) {
 	bestLin, bestAng := 0.0, 0.0
 	maxLin, maxAng := 0.0, 0.0
@@ -1237,6 +1245,8 @@ func sampleEverything(ctx context.Context, odometry movementsensor.MovementSenso
 		}
 	}
 	prevTime := time.Now()
+	var avgRPM [5]float64
+	avgRPMIndex := 0
 
 	for {
 		if !utils.SelectContextOrWait(ctx, tickerDuration) {
@@ -1261,7 +1271,8 @@ func sampleEverything(ctx context.Context, odometry movementsensor.MovementSenso
 				return -1, -1
 			}
 			currTime := time.Now()
-			motorRPM := (motorPos - prevMotorPos) / currTime.Sub(prevTime).Minutes()
+			avgRPM[avgRPMIndex%5] = (motorPos - prevMotorPos) / currTime.Sub(prevTime).Minutes()
+			motorRPM := average(avgRPM)
 			data.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", testType, motorRPM, prevMotorPos, time.Since(startTime).Milliseconds(), motorPos, 0, 0))
 			prevMotorPos = motorPos
 			prevTime = currTime
