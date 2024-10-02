@@ -188,8 +188,8 @@ func runTests(machine *client.RobotClient) {
 	errs = multierr.Combine(errs, err)
 	powerSensor, err := powersensor.FromRobot(machine, "ina219")
 	errs = multierr.Combine(errs, err)
-	// movementSensor, err := movementsensor.FromRobot(machine, "imu")
-	// errs = multierr.Combine(errs, err)
+	movementSensor, err := movementsensor.FromRobot(machine, "imu")
+	errs = multierr.Combine(errs, err)
 
 	if errs != nil {
 		logger.Errorf("error initializing components, err = %v", errs)
@@ -267,9 +267,9 @@ func runTests(machine *client.RobotClient) {
 	logger.Info("Starting power sensor tests...")
 	runPowerSensorTests(powerSensor)
 
-	// // movement sensor tests
-	// logger.Info("Starting movement sensor tests...")
-	// runMovementSensorTests(movementSensor)
+	// movement sensor tests
+	logger.Info("Starting movement sensor tests...")
+	runMovementSensorTests(movementSensor)
 
 	f9 := initializeFiles("./gridDes")
 	defer f9.Close()
@@ -1273,9 +1273,10 @@ func sampleEverything(ctx context.Context, odometry movementsensor.MovementSenso
 			currTime := time.Now()
 			avgRPM[avgRPMIndex%5] = (motorPos - prevMotorPos) / currTime.Sub(prevTime).Minutes()
 			motorRPM := average(avgRPM)
-			data.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", testType, motorRPM, prevMotorPos, time.Since(startTime).Milliseconds(), motorPos, 0, 0))
+			data.WriteString(fmt.Sprintf("%v,%.3v,%.3v,%v,%.3v,%.3v,%.3v\n", testType, avgRPM[avgRPMIndex%5], prevMotorPos, time.Since(startTime).Milliseconds(), motorPos, 0, 0))
 			prevMotorPos = motorPos
 			prevTime = currTime
+			avgRPMIndex++
 
 			// calculate rpm error margins
 			rpmErr := 0.0
