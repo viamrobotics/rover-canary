@@ -38,3 +38,7 @@ wheeledData/run*
 wheeledDes/run*
 
 .venv
+
+# Claude Code
+.claude/worktrees
+.claude/settings.local.json
